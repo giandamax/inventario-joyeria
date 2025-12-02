@@ -22,6 +22,10 @@ if (isset($_POST['buscar'])) {
 
 $sql = "SELECT * FROM productos $where ORDER BY id_producto DESC";
 $resultado = mysqli_query($conexion, $sql);
+
+// (NUEVO) Inicializamos las variables para los totales
+$total_stock_fisico = 0;
+$total_valor_inventario = 0;
 ?>
 
 <!DOCTYPE html>
@@ -92,11 +96,39 @@ $resultado = mysqli_query($conexion, $sql);
 
         .btn-back { color: #888; text-decoration: none; font-weight: 500; transition: color 0.3s; }
         .btn-back:hover { color: #d4af37; }
+
+        /* (NUEVO) Estilos para el pie de totales */
+        .summary-footer {
+            background-color: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid #eee;
+        }
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .summary-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .summary-value {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #333;
+        }
+        .text-gold { color: #d4af37 !important; }
     </style>
 </head>
 <body>
     
     <div class="header-brand">
+        <!-- Ajusta la ruta si es necesario -->
         <img src="logo.jpg" class="logo-small" alt="Logo">
     </div>
 
@@ -104,7 +136,7 @@ $resultado = mysqli_query($conexion, $sql);
         <div class="d-flex justify-content-between align-items-center">
             <a href="index.php" class="btn-back"><i class="fa-solid fa-arrow-left me-2"></i> Volver</a>
             <h2 class="m-0">Colección de Joyas</h2>
-            <div style="width: 80px;"></div> <!-- Espacio para centrar el título visualmente -->
+            <div style="width: 80px;"></div> 
         </div>
 
         <div class="container-table">
@@ -128,12 +160,23 @@ $resultado = mysqli_query($conexion, $sql);
                         </tr>
                     </thead>
                     <tbody>
-                        <?php while ($row = mysqli_fetch_assoc($resultado)) { ?>
+                        <?php 
+                        // (NUEVO) Comprobamos si hay filas antes de entrar
+                        if(mysqli_num_rows($resultado) > 0) {
+                            while ($row = mysqli_fetch_assoc($resultado)) { 
+                                
+                                // (NUEVO) Cálculos matemáticos dentro del bucle
+                                $stock_item = intval($row['cantidad']);
+                                $precio_item = floatval($row['precio']);
+                                
+                                $total_stock_fisico += $stock_item; // Suma unidades
+                                $total_valor_inventario += ($stock_item * $precio_item); // Suma Dinero
+                        ?>
                         <tr>
                             <td class="text-muted small"><?php echo $row['codigo']; ?></td>
                             <td class="fw-bold text-dark"><?php echo $row['nombre']; ?></td>
                             <td><span class="badge bg-light text-dark border"><?php echo $row['categoria']; ?></span></td>
-                            <td class="price-tag">$<?php echo $row['precio']; ?></td>
+                            <td class="price-tag">$<?php echo number_format($row['precio'], 2); ?></td>
                             <td class="text-center">
                                 <?php if($row['cantidad'] < 5) { ?>
                                     <span class="badge-stock">¡Solo <?php echo $row['cantidad']; ?>!</span>
@@ -150,14 +193,34 @@ $resultado = mysqli_query($conexion, $sql);
                                 </a>
                             </td>
                         </tr>
-                        <?php } ?>
+                        <?php 
+                            } // Fin While
+                        } else {
+                            echo "<tr><td colspan='6' class='text-center py-4'>No hay productos registrados.</td></tr>";
+                        }
+                        ?>
                     </tbody>
                 </table>
             </div>
-            
-            <?php if(mysqli_num_rows($resultado) == 0) { ?>
-                <p class="text-center text-muted mt-4">No se encontraron piezas con ese criterio.</p>
+
+            <!-- (NUEVO) Sección de Totales al final de la tabla -->
+            <?php if(mysqli_num_rows($resultado) > 0) { ?>
+            <div class="summary-footer row">
+                <div class="col-md-6 border-end d-flex justify-content-center align-items-center mb-3 mb-md-0">
+                    <div class="summary-item">
+                        <span class="summary-label">Total Piezas (Físico)</span>
+                        <span class="summary-value"><?php echo number_format($total_stock_fisico); ?></span>
+                    </div>
+                </div>
+                <div class="col-md-6 d-flex justify-content-center align-items-center">
+                    <div class="summary-item">
+                        <span class="summary-label">Valor Total Colección</span>
+                        <span class="summary-value text-gold">$<?php echo number_format($total_valor_inventario, 2); ?></span>
+                    </div>
+                </div>
+            </div>
             <?php } ?>
+            <!-- Fin sección totales -->
 
         </div>
     </div>
